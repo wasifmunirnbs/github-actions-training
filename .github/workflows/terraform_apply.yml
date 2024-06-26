@@ -67,11 +67,6 @@ jobs:
         working-directory: examples/kms
         run: terraform plan -out=tfplan
 
-      - name: Terraform Plan Comment
-        uses: marocchino/sticky-pull-request-comment@v2
-        with:
-          path: examples/kms/tfplan
-
       - name: Request Approval
         if: github.event_name == 'pull_request'
         id: approval_step
