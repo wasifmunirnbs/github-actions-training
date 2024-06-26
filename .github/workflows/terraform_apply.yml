@@ -51,7 +51,7 @@ jobs:
 
       - name: Terraform Init
         working-directory: examples/kms
-        run: terraform init -backend-config="bucket=${{ env.S3_BUCKET }}" -backend-config="key=examples/asg/terraform.tfstate"
+        run: terraform init -backend-config="bucket=${{ env.S3_BUCKET }}" -backend-config="key=examples/kms/terraform.tfstate"
 
       - name: Terraform Format
         working-directory: examples/kms
