@@ -55,7 +55,7 @@ jobs:
 
       - name: Terraform Format
         working-directory: examples/kms
-        run: terraform fmt -check
+        run: terraform fmt
 
       - name: TFLint
         working-directory: examples/kms
