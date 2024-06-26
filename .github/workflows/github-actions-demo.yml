@@ -1,18 +1,84 @@
-name: GitHub Actions Demo
-run-name: ${{ github.actor }} is testing out GitHub Actions 🚀
-on: [push]
+name: Terraform Apply
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'examples/kms/**'
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'examples/kms/**'
+  workflow_dispatch: # Allows manual triggering of the workflow
+
 jobs:
-  Explore-GitHub-Actions:
+  terraform:
+    name: 'Terraform'
     runs-on: ubuntu-latest
+
+    env:
+      AWS_REGION: ${{ secrets.AWS_REGION }}
+      S3_BUCKET: ${{ secrets.S3_BUCKET_NAME }}
+      TF_VERSION: 1.2.3 # specify your Terraform version
+      TFLINT_VERSION: 0.34.1 # specify your TFLint version
+
+    permissions:
+      id-token: write
+      contents: read
+
     steps:
-      - run: echo "🎉 The job was automatically triggered by a ${{ github.event_name }} event."
-      - run: echo "🐧 This job is now running on a ${{ runner.os }} server hosted by GitHub!"
-      - run: echo "🔎 The name of your branch is ${{ github.ref }} and your repository is ${{ github.repository }}."
-      - name: Check out repository code
-        uses: actions/checkout@v4
-      - run: echo "💡 The ${{ github.repository }} repository has been cloned to the runner."
-      - run: echo "🖥️ The workflow is now ready to test your code on the runner."
-      - name: List files in the repository
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v1
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+
+      - name: Install TFLint
         run: |
-          ls ${{ github.workspace }}
-      - run: echo "🍏 This job's status is ${{ job.status }}."
+          curl -sL "https://github.com/terraform-linters/tflint/releases/download/v${{ env.TFLINT_VERSION }}/tflint_linux_amd64.zip" -o tflint.zip
+          unzip tflint.zip -d /usr/local/bin/
+          tflint --version
+
+      - name: Terraform Init
+        working-directory: examples/kms
+        run: terraform init -backend-config="bucket=${{ env.S3_BUCKET }}" -backend-config="key=examples/asg/terraform.tfstate"
+
+      - name: Terraform Format
+        working-directory: examples/kms
+        run: terraform fmt -check
+
+      - name: TFLint
+        working-directory: examples/kms
+        run: |
+          tflint --init
+          tflint .
+
+      - name: Terraform Plan
+        working-directory: examples/kms
+        run: terraform plan -out=tfplan
+
+      - name: Terraform Plan Comment
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          path: examples/kms/tfplan
+
+      - name: Request Approval
+        if: github.event_name == 'pull_request'
+        id: approval_step
+        run: echo "Awaiting approval to proceed with Terraform Apply."
+        timeout-minutes: 10 # Adjust the timeout as needed
+
+      - name: Terraform Apply
+        working-directory: examples/kms
+        if: github.event_name == 'push' || github.event_name == 'workflow_dispatch' || github.event.pull_request.merged == true
+        run: terraform apply -auto-approve tfplan
