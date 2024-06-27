@@ -68,6 +68,10 @@ jobs:
         working-directory: examples/kms
         run: terraform plan -out=tfplan
 
+      - name: Verify Plan File
+        working-directory: examples/kms
+        run: ls -la
+
       - name: Upload Plan for Approval
         uses: actions/upload-artifact@v2
         with:
@@ -96,7 +100,11 @@ jobs:
         uses: actions/download-artifact@v2
         with:
           name: tfplan
-          path: examples/kms/
+          path: examples/kms/tfplan
+
+      - name: Verify Downloaded Plan File
+        working-directory: examples/kms
+        run: ls -la
 
       - name: Checkout code
         uses: actions/checkout@v2
