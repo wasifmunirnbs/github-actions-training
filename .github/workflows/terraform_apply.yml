@@ -1,4 +1,4 @@
-name: Terraform Apply
+name: Terraform Plan & Apply
 
 on:
   push:
@@ -15,7 +15,7 @@ on:
 
 jobs:
   terraform:
-    name: 'Terraform'
+    name: 'Terraform Plan'
     runs-on: ubuntu-latest
 
     env:
@@ -81,7 +81,7 @@ jobs:
     name: 'Terraform Apply'
     runs-on: ubuntu-latest
     needs: terraform
-    environment: production
+    environment: Terraform Apply
 
     steps:
       - name: Download Plan
