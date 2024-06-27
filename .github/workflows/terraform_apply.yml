@@ -96,15 +96,7 @@ jobs:
       contents: read
 
     steps:
-      - name: Download Plan
-        uses: actions/download-artifact@v2
-        with:
-          name: tfplan
-          path: examples/kms
-
-      - name: Verify Downloaded Plan File
-        working-directory: examples/kms
-        run: ls -la
+      
 
       - name: Checkout code
         uses: actions/checkout@v2
@@ -124,9 +116,15 @@ jobs:
         working-directory: examples/kms
         run: terraform init -backend-config="bucket=${{ secrets.S3_BUCKET_NAME }}" -backend-config="key=examples/kms/terraform.tfstate"
 
-      - name: List Files (Debugging Step)
+      - name: Download Plan
+        uses: actions/download-artifact@v2
+        with:
+          name: tfplan
+          path: examples/kms
+
+      - name: Verify Downloaded Plan File
         working-directory: examples/kms
-        run: ls -la
+        run: ls -la    
 
       - name: Terraform Apply
         working-directory: examples/kms
