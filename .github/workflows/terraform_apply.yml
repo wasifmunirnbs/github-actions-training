@@ -67,13 +67,46 @@ jobs:
         working-directory: examples/kms
         run: terraform plan -out=tfplan
 
-      - name: Request Approval
-        if: github.event_name == 'pull_request'
-        id: approval_step
-        run: echo "Awaiting approval to proceed with Terraform Apply."
-        timeout-minutes: 10 # Adjust the timeout as needed
+      - name: Save Plan Output
+        working-directory: examples/kms
+        run: terraform show -json tfplan > tfplan.json
+
+      - name: Upload Plan for Approval
+        uses: actions/upload-artifact@v2
+        with:
+          name: tfplan
+          path: examples/kms/tfplan.json
+
+  apply:
+    name: 'Terraform Apply'
+    runs-on: ubuntu-latest
+    needs: terraform
+    environment: production
+
+    steps:
+      - name: Download Plan
+        uses: actions/download-artifact@v2
+        with:
+          name: tfplan
+
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v1
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+
+      - name: Terraform Init
+        working-directory: examples/kms
+        run: terraform init -backend-config="bucket=${{ secrets.S3_BUCKET_NAME }}" -backend-config="key=examples/kms/terraform.tfstate"
 
       - name: Terraform Apply
         working-directory: examples/kms
-        if: github.event_name == 'push' || github.event_name == 'workflow_dispatch' || github.event.pull_request.merged == true
-        run: terraform apply -auto-approve tfplan
+        run: terraform apply -auto-approve tfplan.json    
