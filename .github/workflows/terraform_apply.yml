@@ -68,6 +68,16 @@ jobs:
         working-directory: examples/kms
         run: terraform plan -out=tfplan
 
+      - name: Save Plan Output
+        working-directory: examples/kms
+        run: terraform show -json tfplan > tfplan.json
+
+      - name: Upload Plan for Approval
+        uses: actions/upload-artifact@v2
+        with:
+          name: tfplan
+          path: examples/kms/tfplan.json
+
   apply:
     name: 'Terraform Apply'
     runs-on: ubuntu-latest
@@ -86,6 +96,11 @@ jobs:
       contents: read
 
     steps:
+      - name: Download Plan
+        uses: actions/download-artifact@v2
+        with:
+          name: tfplan
+
       - name: Checkout code
         uses: actions/checkout@v2
 
@@ -106,4 +121,4 @@ jobs:
 
       - name: Terraform Apply
         working-directory: examples/kms
-        run: terraform apply -auto-approve tfplan  
+        run: terraform apply -auto-approve tfplan.json  
